@@ -48,9 +48,16 @@ func main() {
 
 	middleware1 := Middleware1{}
 
+	var handler1 nsq.HandlerFunc
+	handler1 = func(message *nsq.Message) error {
+		log.Printf("Handler 1:\t\t%s\n", message.Body)
+		return nil
+	}
+
 	peacock := peacock.New()
 	peacock.Use(middleware1)
-	peacock.UseHandlerFunc(consumeHandler2)
+	peacock.UseHandler(handler1)
+	peacock.UseHandlerFunc(handlerFunc1)
 
 	consumer, err := nsq.NewConsumer(topic, channel, nsq.NewConfig())
 	if err != nil {
@@ -66,14 +73,14 @@ func main() {
 
 type Middleware1 struct{}
 
-func (m1 Middleware1) HandleMessage(msg *nsq.Message, next nsq.HandlerFunc) error {
-	log.Printf("Middleware 1:\t%s\n", msg.Body)
-	return next(msg)
+func (m1 Middleware1) HandleMessage(message *nsq.Message, next nsq.HandlerFunc) error {
+	log.Printf("Middleware 1:\t%s\n", message.Body)
+	return next(message)
 }
 
-func consumeHandler2(msg *nsq.Message) error {
-	log.Printf("Consumer 2:\t\t%s\n", msg.Body)
-	msg.Finish()
+func handlerFunc1(message *nsq.Message) error {
+	log.Printf("Handler Func 1:\t%s\n\n", message.Body)
+	message.Finish()
 	return nil
 }
 
