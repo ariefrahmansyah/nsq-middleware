@@ -1,18 +1,15 @@
-# peacock [![GoDoc](https://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](https://godoc.org/github.com/ariefrahmansyah/peacock) [![CircleCI](https://circleci.com/gh/ariefrahmansyah/peacock/tree/master.png?style=shield)](https://circleci.com/gh/ariefrahmansyah/peacock/tree/master) [![Coverage Status](https://coveralls.io/repos/github/ariefrahmansyah/peacock/badge.svg?branch=master)](https://coveralls.io/github/ariefrahmansyah/peacock?branch=master) [![GoReportCard](https://goreportcard.com/badge/github.com/ariefrahmansyah/peacock)](https://goreportcard.com/report/github.com/ariefrahmansyah/peacock)
+# nsqg [![GoDoc](https://img.shields.io/badge/go-documentation-blue.svg?style=flat-square)](https://godoc.org/github.com/ariefrahmansyah/nsqg) [![CircleCI](https://circleci.com/gh/ariefrahmansyah/nsqg/tree/master.png?style=shield)](https://circleci.com/gh/ariefrahmansyah/nsqg/tree/master) [![Coverage Status](https://coveralls.io/repos/github/ariefrahmansyah/nsqg/badge.svg?branch=master)](https://coveralls.io/github/ariefrahmansyah/nsqg?branch=master) [![GoReportCard](https://goreportcard.com/badge/github.com/ariefrahmansyah/nsqg)](https://goreportcard.com/report/github.com/ariefrahmansyah/nsqg)
 
-Peacock is middleware for your NSQ consumer handler function. It's heavily inspired by negroni.
-
-![Peacock](https://www.web-savvy-marketing.com/wp-content/uploads/2013/11/Be-the-Peacock.jpg)
-Image source: https://www.web-savvy-marketing.com/2013/11/peacock/
+NSQG is middleware for your NSQ consumer handler function. It's heavily inspired by [negroni](https://github.com/urfave/negroni).
 
 ## Usage
-We can create new middleware object that implement nsq.Handler interface and use it in Peacock object using Use method.
+We can create new middleware object that implement nsq.Handler interface and use it in NSQG object using Use method.
 
 We also can use nsq.HandlerFunc that we already created before.
 
 ```go
-// Create peacock object.
-peacock := peacock.New()
+// Create nsqg object.
+nsqg := nsqg.New()
 
 // Create middleware object that implement nsq.Handler interface.
 type Middleware1 struct{}
@@ -22,7 +19,7 @@ func (m1 Middleware1) HandleMessage(message *nsq.Message, next nsq.HandlerFunc) 
 }
 
 // Use Middleware1.
-peacock.Use(Middleware1{})
+nsqg.Use(Middleware1{})
 
 // We may already have nsq.HandlerFunc.
 func handlerFunc1(message *nsq.Message) error {
@@ -32,9 +29,9 @@ func handlerFunc1(message *nsq.Message) error {
 }
 
 // Let's use it too.
-peacock.UseHandlerFunc(handlerFunc1)
+nsqg.UseHandlerFunc(handlerFunc1)
 
 consumer, _ := nsq.NewConsumer(topicName, channelName, nsq.NewConfig())
-consumer.AddHandler(peacock)
+consumer.AddHandler(nsqg)
 consumer.ConnectToNSQD(nsqdAddress)
 ```

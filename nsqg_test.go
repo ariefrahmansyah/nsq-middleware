@@ -1,4 +1,4 @@
-package peacock
+package nsqg
 
 import (
 	"errors"
@@ -213,7 +213,7 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func TestPeacock_HandleMessage(t *testing.T) {
+func TestNSQG_HandleMessage(t *testing.T) {
 	type fields struct {
 		handlers   []Handler
 		middleware middleware
@@ -241,18 +241,18 @@ func TestPeacock_HandleMessage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			peacock := Peacock{
+			nsqg := NSQG{
 				handlers:   tt.fields.handlers,
 				middleware: tt.fields.middleware,
 			}
-			if err := peacock.HandleMessage(tt.args.message); (err != nil) != tt.wantErr {
-				t.Errorf("Peacock.HandleMessage() error = %v, wantErr %v", err, tt.wantErr)
+			if err := nsqg.HandleMessage(tt.args.message); (err != nil) != tt.wantErr {
+				t.Errorf("NSQG.HandleMessage() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
 }
 
-func TestPeacock_Use(t *testing.T) {
+func TestNSQG_Use(t *testing.T) {
 	type fields struct {
 		handlers   []Handler
 		middleware middleware
@@ -303,16 +303,16 @@ func TestPeacock_Use(t *testing.T) {
 				}
 			}()
 
-			peacock := &Peacock{
+			nsqg := &NSQG{
 				handlers:   tt.fields.handlers,
 				middleware: tt.fields.middleware,
 			}
-			peacock.Use(tt.args.handler)
+			nsqg.Use(tt.args.handler)
 		})
 	}
 }
 
-func TestPeacock_UseFunc(t *testing.T) {
+func TestNSQG_UseFunc(t *testing.T) {
 	type fields struct {
 		handlers   []Handler
 		middleware middleware
@@ -338,16 +338,16 @@ func TestPeacock_UseFunc(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			peacock := &Peacock{
+			nsqg := &NSQG{
 				handlers:   tt.fields.handlers,
 				middleware: tt.fields.middleware,
 			}
-			peacock.UseFunc(tt.args.handlerFunc)
+			nsqg.UseFunc(tt.args.handlerFunc)
 		})
 	}
 }
 
-func TestPeacock_UseHandler(t *testing.T) {
+func TestNSQG_UseHandler(t *testing.T) {
 	type fields struct {
 		handlers   []Handler
 		middleware middleware
@@ -373,16 +373,16 @@ func TestPeacock_UseHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			peacock := &Peacock{
+			nsqg := &NSQG{
 				handlers:   tt.fields.handlers,
 				middleware: tt.fields.middleware,
 			}
-			peacock.UseHandler(tt.args.handler)
+			nsqg.UseHandler(tt.args.handler)
 		})
 	}
 }
 
-func TestPeacock_UseHandlerFunc(t *testing.T) {
+func TestNSQG_UseHandlerFunc(t *testing.T) {
 	type fields struct {
 		handlers   []Handler
 		middleware middleware
@@ -408,11 +408,11 @@ func TestPeacock_UseHandlerFunc(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			peacock := &Peacock{
+			nsqg := &NSQG{
 				handlers:   tt.fields.handlers,
 				middleware: tt.fields.middleware,
 			}
-			peacock.UseHandlerFunc(tt.args.handlerFunc)
+			nsqg.UseHandlerFunc(tt.args.handlerFunc)
 		})
 	}
 }

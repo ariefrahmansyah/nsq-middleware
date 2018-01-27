@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ariefrahmansyah/peacock"
+	"github.com/ariefrahmansyah/nsqg"
 	"github.com/nsqio/go-nsq"
 )
 
@@ -54,17 +54,17 @@ func main() {
 		return nil
 	}
 
-	peacock := peacock.New()
-	peacock.Use(middleware1)
-	peacock.UseHandler(handler1)
-	peacock.UseHandlerFunc(handlerFunc1)
+	nsqg := nsqg.New()
+	nsqg.Use(middleware1)
+	nsqg.UseHandler(handler1)
+	nsqg.UseHandlerFunc(handlerFunc1)
 
 	consumer, err := nsq.NewConsumer(topic, channel, nsq.NewConfig())
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	consumer.AddHandler(peacock)
+	consumer.AddHandler(nsqg)
 
 	consumer.ConnectToNSQD(nsqd)
 
