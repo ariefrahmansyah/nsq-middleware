@@ -19,10 +19,16 @@ func TestPrometheusMiddleware(t *testing.T) {
 	r.Handle("/metrics", prometheus.Handler())
 	n.UseHandler(r)
 
+	// Success handler
 	nsqMid := New(defaultTopic, defaultChannel)
-	nsqMid.Use(NewPromMiddleware("test", PromMiddlewareOpts{}))
+	nsqMid.Use(NewPromMiddleware())
 	nsqMid.Use(mockMiddleware{})
+	nsqMid.HandleMessage(&nsq.Message{Body: []byte(`{"message": 1}`)})
 
+	// Error handler
+	nsqMid = New(defaultTopic, defaultChannel)
+	nsqMid.Use(NewPromMiddleware())
+	nsqMid.UseHandlerFunc(nsqHandlerFuncError)
 	nsqMid.HandleMessage(&nsq.Message{Body: []byte(`{"message": 1}`)})
 
 	reqMetrics, err := http.NewRequest("GET", "http://localhost:8080/metrics", nil)
@@ -34,11 +40,11 @@ func TestPrometheusMiddleware(t *testing.T) {
 
 	body := recorder.Body.String()
 
-	if !strings.Contains(body, messageName) {
-		t.Errorf("body does not contain total consumed messages '%s'", messageName)
+	if !strings.Contains(body, promMessageName) && !strings.Contains(body, "ok") && !strings.Contains(body, "error") {
+		t.Errorf("body does not contain all expected consumed messages '%s' metrics!", promMessageName)
 	}
 
-	if !strings.Contains(body, durationName) {
-		t.Errorf("body does not contain consumer duration '%s'", durationName)
+	if !strings.Contains(body, promDurationName) {
+		t.Errorf("body does not contain consumer duration '%s'", promDurationName)
 	}
 }

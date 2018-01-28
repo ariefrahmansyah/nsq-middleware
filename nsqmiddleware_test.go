@@ -17,23 +17,28 @@ func TestMain(m *testing.M) {
 
 func testMain(m *testing.M) int {
 	handlerFunc = func(topic, channel string, message *nsq.Message, next nsq.HandlerFunc) error {
-		log.Printf("handlerFunc called. Topic: %s. Channel: %s. Message Body: %v", topic, channel, message.Body)
+		log.Printf("handlerFunc called. Topic: %s. Channel: %s. Message Body: %s", topic, channel, message.Body)
 		return next(message)
 	}
 
 	nsqHandlerFunc = func(message *nsq.Message) error {
-		log.Printf("nsqHandlerFunc called. Message Body: %v", message.Body)
+		log.Printf("nsqHandlerFunc called. Message Body: %s", message.Body)
 		return nil
 	}
 
 	nsqHandlerFuncSuccess = nsq.HandlerFunc(func(message *nsq.Message) error {
-		log.Printf("nsqHandlerFuncSuccess called. Message Body: %v", message.Body)
+		log.Printf("nsqHandlerFuncSuccess called. Message Body: %s", message.Body)
 		return nil
 	})
 
 	nsqHandlerFuncError = nsq.HandlerFunc(func(message *nsq.Message) error {
-		log.Printf("nsqHandlerFuncError called. Message Body: %v", message.Body)
+		log.Printf("nsqHandlerFuncError called. Message Body: %s", message.Body)
 		return errors.New("error")
+	})
+
+	nsqHandlerFuncPanic = nsq.HandlerFunc(func(message *nsq.Message) error {
+		panic("panic at the disco 👨‍🎤")
+		return nil
 	})
 
 	run := m.Run()
@@ -61,6 +66,7 @@ var nsqHandlerFunc nsq.HandlerFunc
 
 var nsqHandlerFuncSuccess nsq.HandlerFunc
 var nsqHandlerFuncError nsq.HandlerFunc
+var nsqHandlerFuncPanic nsq.HandlerFunc
 
 var defaultTopic = "topic_test"
 var defaultChannel = "channel_test"

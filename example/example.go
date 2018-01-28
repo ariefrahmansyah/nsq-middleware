@@ -1,14 +1,12 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	nsqm "github.com/ariefrahmansyah/nsq-middleware"
@@ -48,28 +46,32 @@ func main() {
 		}
 	}()
 
-	middleware1 := Middleware1{}
-
 	var handler1 nsq.HandlerFunc
 	handler1 = func(message *nsq.Message) error {
 		log.Printf("Handler 1:\t\t%s\n", message.Body)
 		return nil
 	}
 
-	nsqMid := nsqm.New(topic, channel)
-	nsqMid.Use(nsqm.NewPromMiddleware("test", nsqm.PromMiddlewareOpts{}))
-	nsqMid.Use(middleware1)
-	nsqMid.UseHandler(handler1)
-	nsqMid.UseHandlerFunc(handlerFunc1)
+	for i := 1; i <= 3; i++ {
+		channelName := fmt.Sprintf("%s_%d", channel, i)
 
-	consumer, err := nsq.NewConsumer(topic, channel, nsq.NewConfig())
-	if err != nil {
-		log.Fatalln(err)
+		nsqMid := nsqm.New(topic, channelName)
+		nsqMid.Use(nsqm.NewRecovery())
+		nsqMid.Use(nsqm.NewLogger())
+		nsqMid.Use(nsqm.NewPromMiddleware())
+		nsqMid.Use(Middleware1{})
+		nsqMid.UseHandler(handler1)
+		nsqMid.UseHandlerFunc(handlerFunc1)
+
+		consumer, err := nsq.NewConsumer(topic, channelName, nsq.NewConfig())
+		if err != nil {
+			log.Fatalln(err)
+		}
+
+		consumer.AddHandler(nsqMid)
+
+		consumer.ConnectToNSQD(nsqd)
 	}
-
-	consumer.AddHandler(nsqMid)
-
-	consumer.ConnectToNSQD(nsqd)
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -94,24 +96,7 @@ func (m1 Middleware1) HandleMessage(topic, channel string, message *nsq.Message,
 }
 
 func handlerFunc1(message *nsq.Message) error {
-	log.Printf("Handler Func 1:\t%s\n\n", message.Body)
+	log.Printf("Handler Func 1:\t%s\n", message.Body)
 	message.Finish()
 	return nil
-}
-
-func waitForTerminate(ctx context.Context, cancel context.CancelFunc) {
-	var gracefulStop = make(chan os.Signal)
-	signal.Notify(gracefulStop, syscall.SIGTERM)
-	signal.Notify(gracefulStop, syscall.SIGINT)
-
-	defer func() {
-		signal.Stop(gracefulStop)
-		cancel()
-	}()
-
-	select {
-	case <-gracefulStop:
-		cancel()
-	case <-ctx.Done():
-	}
 }

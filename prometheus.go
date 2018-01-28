@@ -8,14 +8,36 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-var (
-	dflBuckets = []float64{300, 1000, 2500, 5000}
+const (
+	promMessageName  = "nsqm_consumer_messages_total"
+	promDurationName = "nsqm_consumer_duration_milliseconds"
 )
 
-const (
-	messageName  = "nsq_consumer_messages_total"
-	durationName = "nsq_consumer_duration_milliseconds"
+var (
+	promMessage *prometheus.CounterVec
+	promLatency *prometheus.HistogramVec
 )
+
+func init() {
+	promMessage = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: promMessageName,
+			Help: "How many NSQ messages processed, partitioned by topic, channel, attempts and status.",
+		},
+		[]string{"topic", "channel", "attempts", "status"},
+	)
+	prometheus.MustRegister(promMessage)
+
+	buckets := []float64{300, 1000, 2500, 5000}
+	promLatency = prometheus.NewHistogramVec(prometheus.HistogramOpts{
+		Name:    promDurationName,
+		Help:    "How long it took to consume the message, partitioned by topic, channel, attempts and status.",
+		Buckets: buckets,
+	},
+		[]string{"topic", "channel", "attempts", "status"},
+	)
+	prometheus.MustRegister(promLatency)
+}
 
 // PromMiddlewareOpts specifies options how to create new PromMiddleware.
 type PromMiddlewareOpts struct {
@@ -25,40 +47,12 @@ type PromMiddlewareOpts struct {
 
 // PromMiddleware is a handler that exposes prometheus metrics
 // for the number of messages, and the process duration,
-// partitioned by topic, channel, attempt and status.
-type PromMiddleware struct {
-	message *prometheus.CounterVec
-	latency *prometheus.HistogramVec
-}
+// partitioned by topic, channel, attempts and status.
+type PromMiddleware struct{}
 
-func NewPromMiddleware(namespace string, opt PromMiddlewareOpts) *PromMiddleware {
-	var pm PromMiddleware
-
-	pm.message = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Namespace: namespace,
-			Name:      messageName,
-			Help:      "How many NSQ messages processed, partitioned by topic, channel, attempt and status.",
-		},
-		[]string{"topic", "channe", "attempt", "status"},
-	)
-	prometheus.MustRegister(pm.message)
-
-	buckets := opt.Buckets
-	if len(buckets) == 0 {
-		buckets = dflBuckets
-	}
-	pm.latency = prometheus.NewHistogramVec(prometheus.HistogramOpts{
-		Namespace: namespace,
-		Name:      durationName,
-		Help:      "How long it took to consume the message, partitioned by topic, channel, attempt and status.",
-		Buckets:   buckets,
-	},
-		[]string{"topic", "channe", "attempt", "status"},
-	)
-	prometheus.MustRegister(pm.latency)
-
-	return &pm
+// NewPromMiddleware returns a new Prometheus Middleware instance.
+func NewPromMiddleware() *PromMiddleware {
+	return &PromMiddleware{}
 }
 
 func (promM PromMiddleware) HandleMessage(topic, channel string, message *nsq.Message, next nsq.HandlerFunc) error {
@@ -70,8 +64,8 @@ func (promM PromMiddleware) HandleMessage(topic, channel string, message *nsq.Me
 		status = "error"
 	}
 
-	go promM.message.WithLabelValues(topic, channel, fmt.Sprint(message.Attempts), status).Inc()
-	go promM.latency.WithLabelValues(topic, channel, fmt.Sprint(message.Attempts), status).Observe(float64(time.Since(start).Nanoseconds()) / 1000000)
+	go promMessage.WithLabelValues(topic, channel, fmt.Sprint(message.Attempts), status).Inc()
+	go promLatency.WithLabelValues(topic, channel, fmt.Sprint(message.Attempts), status).Observe(float64(time.Since(start).Nanoseconds()) / 1000000)
 
 	return err
 }

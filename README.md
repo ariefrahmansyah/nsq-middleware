@@ -2,6 +2,11 @@
 
 NSQ-Middleware is middleware for your NSQ consumer handler function. It's heavily inspired by [negroni](https://github.com/urfave/negroni).
 
+## Bundled Middleware
+1. Recovery
+2. Logger
+3. Prometheus
+
 ## Usage
 We can create new middleware object that implement nsq.Handler interface and use it in NSQ-Middleware object using Use method.
 
@@ -10,6 +15,11 @@ We also can use nsq.HandlerFunc that we already created before.
 ```go
 // Create NSQ-Middleware object.
 nsqMid := nsqmiddleware.New()
+
+// Optional: Use three bundled middleware.
+nsqMid.Use(nsqm.NewRecovery())
+nsqMid.Use(nsqm.NewLogger())
+nsqMid.Use(nsqm.NewPromMiddleware())
 
 // Create middleware object that implement nsq.Handler interface.
 type Middleware1 struct{}
@@ -35,3 +45,5 @@ consumer, _ := nsq.NewConsumer(topicName, channelName, nsq.NewConfig())
 consumer.AddHandler(nsqMid)
 consumer.ConnectToNSQD(nsqdAddress)
 ```
+
+Check [example package](https://github.com/ariefrahmansyah/nsq-middleware/blob/master/example) for more usage examples.
