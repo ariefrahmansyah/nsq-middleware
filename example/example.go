@@ -5,13 +5,15 @@ import (
 	"encoding/json"
 	"log"
 	"math/rand"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/ariefrahmansyah/nsqg"
+	nsqm "github.com/ariefrahmansyah/nsq-middleware"
 	"github.com/nsqio/go-nsq"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 var nsqd = "127.0.0.1:4150"
@@ -20,8 +22,8 @@ var channel = "ar_simple_channel"
 var maxRandom = 23031994
 
 func main() {
-	ctx := context.Background()
-	ctx, cancel := context.WithCancel(ctx)
+	// ctx := context.Background()
+	// ctx, cancel := context.WithCancel(ctx)
 
 	producer, err := nsq.NewProducer(nsqd, nsq.NewConfig())
 	if err != nil {
@@ -54,27 +56,40 @@ func main() {
 		return nil
 	}
 
-	nsqg := nsqg.New()
-	nsqg.Use(middleware1)
-	nsqg.UseHandler(handler1)
-	nsqg.UseHandlerFunc(handlerFunc1)
+	nsqMid := nsqm.New(topic, channel)
+	nsqMid.Use(nsqm.NewPromMiddleware("test", nsqm.PromMiddlewareOpts{}))
+	nsqMid.Use(middleware1)
+	nsqMid.UseHandler(handler1)
+	nsqMid.UseHandlerFunc(handlerFunc1)
 
 	consumer, err := nsq.NewConsumer(topic, channel, nsq.NewConfig())
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	consumer.AddHandler(nsqg)
+	consumer.AddHandler(nsqMid)
 
 	consumer.ConnectToNSQD(nsqd)
 
-	waitForTerminate(ctx, cancel)
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	http.Handle("/metrics", prometheus.Handler())
+
+	http.HandleFunc("/ping", ping)
+	http.ListenAndServe(":"+port, nil)
+}
+
+func ping(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("pong\n"))
 }
 
 type Middleware1 struct{}
 
-func (m1 Middleware1) HandleMessage(message *nsq.Message, next nsq.HandlerFunc) error {
-	log.Printf("Middleware 1:\t%s\n", message.Body)
+func (m1 Middleware1) HandleMessage(topic, channel string, message *nsq.Message, next nsq.HandlerFunc) error {
+	log.Printf("Middleware 1:\t%s -> %s\t%s\n", topic, channel, message.Body)
 	return next(message)
 }
 

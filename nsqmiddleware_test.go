@@ -1,4 +1,4 @@
-package nsqg
+package nsqmiddleware
 
 import (
 	"errors"
@@ -16,8 +16,8 @@ func TestMain(m *testing.M) {
 }
 
 func testMain(m *testing.M) int {
-	handlerFunc = func(message *nsq.Message, next nsq.HandlerFunc) error {
-		log.Printf("handlerFunc called. Message Body: %v", message.Body)
+	handlerFunc = func(topic, channel string, message *nsq.Message, next nsq.HandlerFunc) error {
+		log.Printf("handlerFunc called. Topic: %s. Channel: %s. Message Body: %v", topic, channel, message.Body)
 		return next(message)
 	}
 
@@ -44,8 +44,8 @@ type mockMiddleware struct {
 	err error
 }
 
-func (m mockMiddleware) HandleMessage(message *nsq.Message, next nsq.HandlerFunc) error {
-	log.Printf("Mock middleware. Message Body: %s", message.Body)
+func (m mockMiddleware) HandleMessage(topic, channel string, message *nsq.Message, next nsq.HandlerFunc) error {
+	log.Printf("Mock middleware. Topic: %s. Channel: %s. Message Body: %s", topic, channel, message.Body)
 
 	if m.err != nil {
 		log.Printf("Mock middleware error: %s", m.err)
@@ -62,6 +62,9 @@ var nsqHandlerFunc nsq.HandlerFunc
 var nsqHandlerFuncSuccess nsq.HandlerFunc
 var nsqHandlerFuncError nsq.HandlerFunc
 
+var defaultTopic = "topic_test"
+var defaultChannel = "channel_test"
+
 func TestWrapHandler(t *testing.T) {
 	got := WrapHandler(nsqHandlerFuncSuccess)
 	if got == nil {
@@ -71,6 +74,8 @@ func TestWrapHandler(t *testing.T) {
 
 func TestHandlerFunc_HandleMessage(t *testing.T) {
 	type args struct {
+		topic   string
+		channel string
 		message *nsq.Message
 		next    nsq.HandlerFunc
 	}
@@ -84,6 +89,8 @@ func TestHandlerFunc_HandleMessage(t *testing.T) {
 			"success handler",
 			handlerFunc,
 			args{
+				"topic_1",
+				"channel_1",
 				&nsq.Message{},
 				nsqHandlerFuncSuccess,
 			},
@@ -93,6 +100,8 @@ func TestHandlerFunc_HandleMessage(t *testing.T) {
 			"error handler",
 			handlerFunc,
 			args{
+				"topic_1",
+				"channel_1",
 				&nsq.Message{},
 				nsqHandlerFuncError,
 			},
@@ -101,7 +110,7 @@ func TestHandlerFunc_HandleMessage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := tt.handlerFunc.HandleMessage(tt.args.message, tt.args.next); (err != nil) != tt.wantErr {
+			if err := tt.handlerFunc.HandleMessage(tt.args.topic, tt.args.channel, tt.args.message, tt.args.next); (err != nil) != tt.wantErr {
 				t.Errorf("HandlerFunc.HandleMessage() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -139,6 +148,8 @@ func TestMiddleware_HandleMessage(t *testing.T) {
 
 func Test_buildMiddleware(t *testing.T) {
 	type args struct {
+		topic    string
+		channel  string
 		handlers []Handler
 	}
 	tests := []struct {
@@ -150,7 +161,7 @@ func Test_buildMiddleware(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := buildMiddleware(tt.args.handlers); !reflect.DeepEqual(got, tt.want) {
+			if got := buildMiddleware(tt.args.topic, tt.args.channel, tt.args.handlers); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("buildMiddleware() = %v, want %v", got, tt.want)
 			}
 		})
@@ -175,6 +186,8 @@ func Test_emptyMiddleware(t *testing.T) {
 
 func TestNew(t *testing.T) {
 	type args struct {
+		topic    string
+		channel  string
 		handlers []Handler
 	}
 	tests := []struct {
@@ -188,6 +201,8 @@ func TestNew(t *testing.T) {
 		{
 			"one handler",
 			args{
+				"topic_1",
+				"channel_1",
 				[]Handler{
 					handlerFunc,
 				},
@@ -196,6 +211,8 @@ func TestNew(t *testing.T) {
 		{
 			"two handler",
 			args{
+				"topic_1",
+				"channel_1",
 				[]Handler{
 					handlerFunc,
 					handlerFunc,
@@ -205,7 +222,7 @@ func TestNew(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := New(tt.args.handlers...)
+			got := New(tt.args.topic, tt.args.channel, tt.args.handlers...)
 			if got == nil {
 				t.Errorf("New() must not nil")
 			}
@@ -213,7 +230,7 @@ func TestNew(t *testing.T) {
 	}
 }
 
-func TestNSQG_HandleMessage(t *testing.T) {
+func TestNSQM_HandleMessage(t *testing.T) {
 	type fields struct {
 		handlers   []Handler
 		middleware middleware
@@ -231,7 +248,7 @@ func TestNSQG_HandleMessage(t *testing.T) {
 			"empty handler",
 			fields{
 				[]Handler{},
-				buildMiddleware([]Handler{}),
+				buildMiddleware("", "", []Handler{}),
 			},
 			args{
 				&nsq.Message{},
@@ -241,18 +258,18 @@ func TestNSQG_HandleMessage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			nsqg := NSQG{
+			nsqm := NSQM{
 				handlers:   tt.fields.handlers,
 				middleware: tt.fields.middleware,
 			}
-			if err := nsqg.HandleMessage(tt.args.message); (err != nil) != tt.wantErr {
-				t.Errorf("NSQG.HandleMessage() error = %v, wantErr %v", err, tt.wantErr)
+			if err := nsqm.HandleMessage(tt.args.message); (err != nil) != tt.wantErr {
+				t.Errorf("NSQM.HandleMessage() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}
 }
 
-func TestNSQG_Use(t *testing.T) {
+func TestNSQM_Use(t *testing.T) {
 	type fields struct {
 		handlers   []Handler
 		middleware middleware
@@ -303,22 +320,22 @@ func TestNSQG_Use(t *testing.T) {
 				}
 			}()
 
-			nsqg := &NSQG{
+			nsqm := &NSQM{
 				handlers:   tt.fields.handlers,
 				middleware: tt.fields.middleware,
 			}
-			nsqg.Use(tt.args.handler)
+			nsqm.Use(tt.args.handler)
 		})
 	}
 }
 
-func TestNSQG_UseFunc(t *testing.T) {
+func TestNSQM_UseFunc(t *testing.T) {
 	type fields struct {
 		handlers   []Handler
 		middleware middleware
 	}
 	type args struct {
-		handlerFunc func(message *nsq.Message, next nsq.HandlerFunc) error
+		handlerFunc func(topic, channel string, message *nsq.Message, next nsq.HandlerFunc) error
 	}
 	tests := []struct {
 		name   string
@@ -338,16 +355,16 @@ func TestNSQG_UseFunc(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			nsqg := &NSQG{
+			nsqm := &NSQM{
 				handlers:   tt.fields.handlers,
 				middleware: tt.fields.middleware,
 			}
-			nsqg.UseFunc(tt.args.handlerFunc)
+			nsqm.UseFunc(tt.args.handlerFunc)
 		})
 	}
 }
 
-func TestNSQG_UseHandler(t *testing.T) {
+func TestNSQM_UseHandler(t *testing.T) {
 	type fields struct {
 		handlers   []Handler
 		middleware middleware
@@ -373,16 +390,16 @@ func TestNSQG_UseHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			nsqg := &NSQG{
+			nsqm := &NSQM{
 				handlers:   tt.fields.handlers,
 				middleware: tt.fields.middleware,
 			}
-			nsqg.UseHandler(tt.args.handler)
+			nsqm.UseHandler(tt.args.handler)
 		})
 	}
 }
 
-func TestNSQG_UseHandlerFunc(t *testing.T) {
+func TestNSQM_UseHandlerFunc(t *testing.T) {
 	type fields struct {
 		handlers   []Handler
 		middleware middleware
@@ -408,11 +425,11 @@ func TestNSQG_UseHandlerFunc(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			nsqg := &NSQG{
+			nsqm := &NSQM{
 				handlers:   tt.fields.handlers,
 				middleware: tt.fields.middleware,
 			}
-			nsqg.UseHandlerFunc(tt.args.handlerFunc)
+			nsqm.UseHandlerFunc(tt.args.handlerFunc)
 		})
 	}
 }
