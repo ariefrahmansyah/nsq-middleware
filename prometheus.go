@@ -13,8 +13,8 @@ var (
 )
 
 const (
-	messageName  = "consumer_messages_total"
-	durationName = "consumer_duration_milliseconds"
+	messageName  = "nsq_consumer_messages_total"
+	durationName = "nsq_consumer_duration_milliseconds"
 )
 
 // PromMiddlewareOpts specifies options how to create new PromMiddleware.
