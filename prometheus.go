@@ -39,23 +39,17 @@ func init() {
 	prometheus.MustRegister(promLatency)
 }
 
-// PromMiddlewareOpts specifies options how to create new PromMiddleware.
-type PromMiddlewareOpts struct {
-	// Buckets specifies an custom buckets to be used in request histograpm.
-	Buckets []float64
-}
-
-// PromMiddleware is a handler that exposes prometheus metrics
+// Prometheus is a handler that exposes prometheus metrics
 // for the number of messages, and the process duration,
 // partitioned by topic, channel, attempts and status.
-type PromMiddleware struct{}
+type Prometheus struct{}
 
-// NewPromMiddleware returns a new Prometheus Middleware instance.
-func NewPromMiddleware() *PromMiddleware {
-	return &PromMiddleware{}
+// NewPrometheus returns a new Prometheus Middleware instance.
+func NewPrometheus() *Prometheus {
+	return &Prometheus{}
 }
 
-func (promM PromMiddleware) HandleMessage(topic, channel string, message *nsq.Message, next nsq.HandlerFunc) error {
+func (prometheus Prometheus) HandleMessage(topic, channel string, message *nsq.Message, next nsq.HandlerFunc) error {
 	start := time.Now()
 	status := "ok"
 

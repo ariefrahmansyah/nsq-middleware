@@ -19,7 +19,7 @@ nsqMid := nsqmiddleware.New()
 // Optional: Use three bundled middleware.
 nsqMid.Use(nsqm.NewRecovery())
 nsqMid.Use(nsqm.NewLogger())
-nsqMid.Use(nsqm.NewPromMiddleware())
+nsqMid.Use(nsqm.NewPrometheus())
 
 // Create middleware object that implement nsq.Handler interface.
 type Middleware1 struct{}

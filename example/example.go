@@ -58,7 +58,7 @@ func main() {
 		nsqMid := nsqm.New(topic, channelName)
 		nsqMid.Use(nsqm.NewRecovery())
 		nsqMid.Use(nsqm.NewLogger())
-		nsqMid.Use(nsqm.NewPromMiddleware())
+		nsqMid.Use(nsqm.NewPrometheus())
 		nsqMid.Use(Middleware1{})
 		nsqMid.UseHandler(handler1)
 		nsqMid.UseHandlerFunc(handlerFunc1)

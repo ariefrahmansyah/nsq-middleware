@@ -21,13 +21,13 @@ func TestPrometheusMiddleware(t *testing.T) {
 
 	// Success handler
 	nsqMid := New(defaultTopic, defaultChannel)
-	nsqMid.Use(NewPromMiddleware())
+	nsqMid.Use(NewPrometheus())
 	nsqMid.Use(mockMiddleware{})
 	nsqMid.HandleMessage(&nsq.Message{Body: []byte(`{"message": 1}`)})
 
 	// Error handler
 	nsqMid = New(defaultTopic, defaultChannel)
-	nsqMid.Use(NewPromMiddleware())
+	nsqMid.Use(NewPrometheus())
 	nsqMid.UseHandlerFunc(nsqHandlerFuncError)
 	nsqMid.HandleMessage(&nsq.Message{Body: []byte(`{"message": 1}`)})
 
