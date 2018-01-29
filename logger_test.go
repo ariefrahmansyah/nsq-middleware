@@ -52,6 +52,23 @@ func TestLoggerMiddlewareError(t *testing.T) {
 	}
 }
 
+func TestLogger_SetLevel(t *testing.T) {
+	var buff bytes.Buffer
+
+	logger := NewLogger()
+	logger.SetLevel(ErrorLevel)
+	logger.ILogger = log.New(&buff, "[nsqm] ", 0)
+
+	nsqMid := New(defaultTopic, defaultChannel)
+	nsqMid.Use(logger)
+	nsqMid.Use(mockMiddleware{})
+	nsqMid.HandleMessage(&nsq.Message{Attempts: 1, Body: []byte(`{"message": 1}`)})
+
+	if len(buff.String()) != 0 {
+		t.Errorf("log body must be empty 😱")
+	}
+}
+
 func TestLogger_SetFormat(t *testing.T) {
 	var buff bytes.Buffer
 

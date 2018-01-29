@@ -10,6 +10,15 @@ import (
 	"github.com/nsqio/go-nsq"
 )
 
+// Level type.
+type Level uint32
+
+// These are the different logging levels.
+const (
+	SuccessLevel Level = iota
+	ErrorLevel
+)
+
 // LoggerEntry is the structure passed to the template.
 type LoggerEntry struct {
 	StartTime   string
@@ -20,6 +29,9 @@ type LoggerEntry struct {
 	Attempts    uint16
 	ErrorString string
 }
+
+// LoggerDefaultLevel is the log level used by the default Logger instance.
+var LoggerDefaultLevel = SuccessLevel
 
 // LoggerDefaultFormat is the format logged used by the default Logger instance.
 var LoggerDefaultFormat = "{{.StartTime}} \t{{.Duration}} [{{.Topic}}/{{.Channel}}] ({{.Attempts}}) {{.Status}} {{.ErrorString}} \n"
@@ -39,13 +51,20 @@ type Logger struct {
 	ILogger
 	dateFormat string
 	template   *template.Template
+	level      Level
 }
 
 // NewLogger returns a new Logger instance.
 func NewLogger() *Logger {
 	logger := &Logger{ILogger: log.New(os.Stdout, "[nsqm] ", 0), dateFormat: LoggerDefaultDateFormat}
+	logger.SetLevel(LoggerDefaultLevel)
 	logger.SetFormat(LoggerDefaultFormat)
 	return logger
+}
+
+// SetLevel sets the level.
+func (logger *Logger) SetLevel(level Level) {
+	logger.level = level
 }
 
 // SetFormat sets the format used by the logger.
@@ -62,26 +81,31 @@ func (logger *Logger) HandleMessage(topic, channel string, message *nsq.Message,
 	start := time.Now()
 	status := "ok"
 	errStr := ""
+	validToLog := true
 
 	err := next(message)
-	if err != nil {
+	if err == nil && logger.level >= ErrorLevel {
+		validToLog = false
+	} else if err != nil {
 		status = "error"
 		errStr = err.Error()
 	}
 
-	log := LoggerEntry{
-		StartTime:   start.Format(logger.dateFormat),
-		Status:      status,
-		Duration:    time.Since(start),
-		Topic:       topic,
-		Channel:     channel,
-		Attempts:    message.Attempts,
-		ErrorString: errStr,
-	}
+	if validToLog {
+		log := LoggerEntry{
+			StartTime:   start.Format(logger.dateFormat),
+			Status:      status,
+			Duration:    time.Since(start),
+			Topic:       topic,
+			Channel:     channel,
+			Attempts:    message.Attempts,
+			ErrorString: errStr,
+		}
 
-	buff := &bytes.Buffer{}
-	logger.template.Execute(buff, log)
-	logger.Printf(buff.String())
+		buff := &bytes.Buffer{}
+		logger.template.Execute(buff, log)
+		logger.Printf(buff.String())
+	}
 
 	return err
 }
