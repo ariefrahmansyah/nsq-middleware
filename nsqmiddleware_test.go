@@ -38,7 +38,6 @@ func testMain(m *testing.M) int {
 
 	nsqHandlerFuncPanic = nsq.HandlerFunc(func(message *nsq.Message) error {
 		panic("panic at the disco 👨‍🎤")
-		return nil
 	})
 
 	run := m.Run()
@@ -229,6 +228,44 @@ func TestNew(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := New(tt.args.topic, tt.args.channel, tt.args.handlers...)
+			if got == nil {
+				t.Errorf("New() must not nil")
+			}
+		})
+	}
+}
+
+func TestNewDefault(t *testing.T) {
+	type args struct {
+		topic   string
+		channel string
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		{
+			"empty handler",
+			args{},
+		},
+		{
+			"one handler",
+			args{
+				"topic_1",
+				"channel_1",
+			},
+		},
+		{
+			"two handler",
+			args{
+				"topic_1",
+				"channel_1",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := NewDefault(tt.args.topic, tt.args.channel)
 			if got == nil {
 				t.Errorf("New() must not nil")
 			}

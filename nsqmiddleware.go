@@ -85,6 +85,11 @@ func New(topic, channel string, handlers ...Handler) *NSQM {
 	}
 }
 
+// NewDefault returns a new NSQM default instance with bundled middleware (recovery, logger, and prometheus).
+func NewDefault(topic, channel string) *NSQM {
+	return New(topic, channel, NewRecovery(), NewLogger(), NewPrometheus())
+}
+
 func (nsqm NSQM) HandleMessage(message *nsq.Message) error {
 	return nsqm.middleware.HandleMessage(message)
 }
