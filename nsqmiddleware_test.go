@@ -267,7 +267,7 @@ func TestNewDefault(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := NewDefault(tt.args.topic, tt.args.channel)
 			if got == nil {
-				t.Errorf("New() must not nil")
+				t.Errorf("NewDefault() must not nil")
 			}
 		})
 	}
